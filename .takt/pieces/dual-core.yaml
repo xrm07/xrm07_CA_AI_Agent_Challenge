@@ -1,0 +1,101 @@
+name: dual-core
+description: Claude plans and implements, Codex audits and fixes with minimal permissions.
+interactive_mode: assistant
+initial_movement: plan
+max_movements: 10
+
+piece_config:
+  provider_options:
+    claude:
+      network_access: true
+    codex:
+      network_access: true
+
+movements:
+  - name: plan
+    edit: false
+    permission_mode: readonly
+    provider: claude
+    persona: architect-planner
+    knowledge: architecture
+    allowed_tools: [Read, Glob, Grep]
+    instruction_template: |
+      Goal: create PLAN.md at repository root before any code changes.
+      Constraints:
+      - Do not modify source code in this movement.
+      Deliverables:
+      - PLAN.md with requirements, candidate files, implementation steps, validation criteria,
+        rollback procedure, and risks.
+      - A short movement report summarizing key decisions.
+    output_contracts:
+      report:
+        - name: 01-plan-summary.md
+    rules:
+      - condition: done
+        next: audit
+
+  - name: audit
+    edit: false
+    permission_mode: readonly
+    provider: codex
+    persona: security-reviewer
+    knowledge: architecture
+    allowed_tools: [Read, Glob, Grep]
+    instruction_template: |
+      Input: PLAN.md at repository root.
+      Goal: audit the plan for missing items, contradictions, security risks, dependency gaps,
+      and execution risks.
+      Deliverables:
+      - AUDIT.md at repository root with PASS/FAIL and evidence.
+      - Report with top 5 critical findings.
+      Constraint:
+      - Do not modify source code in this movement.
+    output_contracts:
+      report:
+        - name: 02-audit-top5.md
+    rules:
+      - condition: done
+        next: implement
+
+  - name: implement
+    edit: true
+    permission_mode: edit
+    provider: claude
+    persona: coder
+    knowledge: architecture
+    allowed_tools: [Read, Glob, Grep, Edit, Bash]
+    instruction_template: |
+      Inputs: PLAN.md and AUDIT.md.
+      Goal: implement according to PLAN.md and resolve audit findings.
+      Rules:
+      - Keep changes minimal and explain each change.
+      - Run relevant build/tests and document command outputs.
+      Deliverable:
+      - Implementation report including changed files, commands, and results.
+    output_contracts:
+      report:
+        - name: 03-implement-log.md
+    rules:
+      - condition: done
+        next: fix
+
+  - name: fix
+    edit: true
+    permission_mode: edit
+    provider: codex
+    persona: code-reviewer
+    knowledge: architecture
+    allowed_tools: [Read, Glob, Grep, Edit, Bash]
+    instruction_template: |
+      Goal: make minimal fixes for failed tests/build or quality issues.
+      Rules:
+      - Do not weaken test coverage to force a pass.
+      - Iterate as: identify root cause -> propose minimal fix -> apply -> verify.
+      Deliverable:
+      - Fix report with root cause, patch summary, rerun commands, and outcomes.
+    output_contracts:
+      report:
+        - name: 04-fix-log.md
+    rules:
+      - condition: done
+        next: COMPLETE
