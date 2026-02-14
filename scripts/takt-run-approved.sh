@@ -7,52 +7,53 @@ PHASE2_PIECE="dual-core-apply"
 auto_pr=false
 create_worktree=""
 common_args=()
-expect_piece_value=false
-expect_create_worktree_value=false
+piece_value=""
 
-for arg in "$@"; do
-  if $expect_piece_value; then
-    expect_piece_value=false
-    continue
-  fi
-  if $expect_create_worktree_value; then
-    create_worktree="$arg"
-    expect_create_worktree_value=false
-    continue
-  fi
-
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     -w|--piece)
-      expect_piece_value=true
+      if [[ $# -lt 2 ]]; then
+        echo "[gate] ERROR: missing value for -w/--piece" >&2
+        exit 1
+      fi
+      piece_value="$2"
+      shift 2
       ;;
     --piece=*)
+      piece_value="${1#*=}"
+      shift
       ;;
     --auto-pr)
       auto_pr=true
+      shift
       ;;
     --create-worktree)
-      expect_create_worktree_value=true
+      if [[ $# -lt 2 ]]; then
+        echo "[gate] ERROR: missing value for --create-worktree" >&2
+        exit 1
+      fi
+      create_worktree="$2"
+      shift 2
       ;;
     --create-worktree=*)
-      create_worktree="${arg#*=}"
+      create_worktree="${1#*=}"
+      shift
       ;;
     *)
-      common_args+=("$arg")
+      common_args+=("$1")
+      shift
       ;;
   esac
 done
 
-if $expect_piece_value; then
-  echo "[gate] ERROR: missing value for -w/--piece" >&2
-  exit 1
-fi
-
-if $expect_create_worktree_value; then
-  echo "[gate] ERROR: missing value for --create-worktree" >&2
+if [[ -n "$piece_value" && "$piece_value" != "dual-core" ]]; then
+  echo "[gate] ERROR: wrapper only accepts piece 'dual-core' (received: $piece_value)" >&2
   exit 1
 fi
 
 marker_file="$(mktemp)"
+# Keep marker slightly in the past to avoid same-timestamp misses on coarse filesystems.
+touch -d '1 second ago' "$marker_file" 2>/dev/null || true
 cleanup() {
   rm -f "$marker_file"
 }
@@ -68,50 +69,37 @@ echo "[gate] ${phase1_cmd[*]}"
 "${phase1_cmd[@]}"
 
 mapfile -t approval_candidates < <(
-  find "$PWD" "$(dirname "$PWD")" -maxdepth 4 -type f -name APPROVAL.md -newer "$marker_file" 2>/dev/null
+  find "$PWD" -maxdepth 4 -type f -name APPROVAL.md -newer "$marker_file" 2>/dev/null
 )
 
-if [[ ${#approval_candidates[@]} -eq 0 && -f APPROVAL.md ]]; then
-  approval_candidates+=("$(pwd)/APPROVAL.md")
-fi
-
 if [[ ${#approval_candidates[@]} -eq 0 ]]; then
-  echo "[gate] ERROR: APPROVAL.md was not found after phase 1." >&2
+  echo "[gate] ERROR: no updated APPROVAL.md found under $PWD after phase 1." >&2
   exit 2
 fi
 
-approval_file=""
-latest_mtime=0
-for candidate in "${approval_candidates[@]}"; do
-  [[ -f "$candidate" ]] || continue
-  mtime="$(stat -c %Y "$candidate" 2>/dev/null || stat -f %m "$candidate")"
-  if [[ "$mtime" -ge "$latest_mtime" ]]; then
-    latest_mtime="$mtime"
-    approval_file="$candidate"
-  fi
-done
-
-if [[ -z "$approval_file" ]]; then
-  echo "[gate] ERROR: failed to resolve APPROVAL.md path." >&2
+if [[ ${#approval_candidates[@]} -gt 1 ]]; then
+  echo "[gate] ERROR: multiple updated APPROVAL.md files found; refusing to guess." >&2
+  printf '  - %s\n' "${approval_candidates[@]}" >&2
   exit 2
 fi
 
+approval_file="${approval_candidates[0]}"
 echo "[gate] Approval packet: $approval_file"
 echo "---------------- APPROVAL.md ----------------"
 cat "$approval_file"
 echo "---------------------------------------------"
 
-if ! grep -Eiq '^[[:space:]\-*]*Approved([[:space:]]*\(Y/N\))?[[:space:]]*:[[:space:]]*Y([[:space:]]|$)' "$approval_file"; then
+if ! grep -Eiq '^[[:space:]-]*Approved([[:space:]]*\(Y/N\))?[[:space:]]*:[[:space:]]*Y([[:space:]]|$)' "$approval_file"; then
   echo "[gate] ERROR: APPROVAL.md is not marked as approved (Y)." >&2
   exit 3
 fi
 
-if ! grep -Eiq '^[[:space:]\-*]*Reason[[:space:]]*:[[:space:]]*[^[:space:]].*' "$approval_file"; then
+if ! grep -Eiq '^[[:space:]-]*Reason[[:space:]]*:[[:space:]]*[^[:space:]].*' "$approval_file"; then
   echo "[gate] ERROR: APPROVAL.md missing non-empty Reason." >&2
   exit 3
 fi
 
-if ! grep -Eiq '^[[:space:]\-*]*Timestamp[[:space:]]*:[[:space:]]*[^[:space:]].*' "$approval_file"; then
+if ! grep -Eiq '^[[:space:]-]*Timestamp[[:space:]]*:[[:space:]]*[^[:space:]].*' "$approval_file"; then
   echo "[gate] ERROR: APPROVAL.md missing non-empty Timestamp." >&2
   exit 3
 fi
