@@ -98,6 +98,7 @@ Behavior:
 Notes:
 
 - `-w/--piece` is optional for the wrapper, but if provided it must be `dual-core`.
+- `--create-worktree` accepts `yes|no|true|false`; wrapper normalizes to `yes|no` before invoking `takt`.
 - If multiple updated clone metadata files are found, wrapper stops instead of guessing.
 - If `--create-worktree yes` is set but no updated clone metadata is found, wrapper stops.
 
@@ -196,6 +197,7 @@ from `gpt-5.3-codex` to `codex`, run the task, then restore the original model s
 6. Worktree resolution check
    - With `--create-worktree yes`, wrapper resolves phase-1 run directory from clone metadata.
    - With `--create-worktree no`, wrapper does not use clone metadata.
+   - With `--create-worktree true|false`, wrapper normalizes and forwards `yes|no` to `takt`.
    - Wrapper fails if multiple updated clone metadata files are found.
 7. Piece-flag check
    - `./scripts/takt-run-approved.sh -w dual-core` succeeds.

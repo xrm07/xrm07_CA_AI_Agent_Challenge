@@ -6,6 +6,7 @@ PHASE2_PIECE="dual-core-apply"
 
 auto_pr=false
 create_worktree=""
+create_worktree_takt=""
 common_args=()
 piece_value=""
 worktree_mode="auto"
@@ -56,12 +57,14 @@ if [[ -n "$create_worktree" ]]; then
   case "$create_worktree" in
     yes|true)
       worktree_mode="yes"
+      create_worktree_takt="yes"
       ;;
     no|false)
       worktree_mode="no"
+      create_worktree_takt="no"
       ;;
     *)
-      echo "[gate] ERROR: invalid --create-worktree value: $create_worktree (expected yes|no)" >&2
+      echo "[gate] ERROR: invalid --create-worktree value: $create_worktree (expected yes|no|true|false)" >&2
       exit 1
       ;;
   esac
@@ -76,8 +79,8 @@ cleanup() {
 trap cleanup EXIT
 
 phase1_cmd=(takt "${common_args[@]}" -w "$PHASE1_PIECE")
-if [[ -n "$create_worktree" ]]; then
-  phase1_cmd+=(--create-worktree "$create_worktree")
+if [[ -n "$create_worktree_takt" ]]; then
+  phase1_cmd+=(--create-worktree "$create_worktree_takt")
 fi
 
 echo "[gate] Phase 1/2: running ${PHASE1_PIECE}"
