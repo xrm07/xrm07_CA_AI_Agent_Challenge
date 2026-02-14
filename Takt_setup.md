@@ -25,7 +25,7 @@ This document also captures approvals required before production use.
 - Network access policy: `allowed in all movements`
 - Approval packet policy: `APPROVAL.md required before implement`
 - max movement policy: `max_movements = 12`, stop on limit with manual follow-up
-- Hard gate policy: `approval phase always completes and requires explicit human Y/n before phase 2`
+- Hard gate policy: `approval phase always completes and requires explicit human Y/y before phase 2`
 
 ## 3. Preflight Checks (Executed)
 
@@ -92,8 +92,8 @@ Behavior:
    - Otherwise use current directory.
 3. Reads `APPROVAL.md` from phase-1 execution directory root.
 4. Verifies `APPROVAL.md` contains approved status and required fields.
-5. Prompts: `Proceed with implementation? (Y/n)`.
-6. Runs phase 2 (`dual-core-apply`) only when the user confirms.
+5. Prompts: `Proceed with implementation? (y/N)`.
+6. Runs phase 2 (`dual-core-apply`) only when the user explicitly enters `Y` or `y`.
 
 Notes:
 
@@ -111,10 +111,10 @@ Then verify approval packet and confirm in terminal:
 
 ```bash
 cat APPROVAL.md
-read -r -p "Proceed with implementation? (Y/n): " yn
+read -r -p "Proceed with implementation? (y/N): " yn
 ```
 
-If approved:
+If explicitly approved (`Y`/`y`):
 
 ```bash
 takt -w dual-core-apply --create-worktree no --auto-pr
@@ -144,6 +144,7 @@ Wrapper validation requires all of the following:
 - `APPROVAL.md` is updated by phase 1 (stale packet is rejected)
 
 If any check fails, phase 2 is blocked.
+Blank approval input is treated as rejection; phase 2 proceeds only on explicit `Y`/`y`.
 
 ## 8. Model Override Policy
 
@@ -188,7 +189,7 @@ from `gpt-5.3-codex` to `codex`, run the task, then restore the original model s
    - `bash -n scripts/takt-run-approved.sh`
 4. Hard gate check
    - Phase 1 ends before implementation starts.
-   - Wrapper asks `Proceed with implementation? (Y/n)`.
+   - Wrapper asks `Proceed with implementation? (y/N)`.
 5. Approval packet check
    - Wrapper fails if `APPROVAL.md` does not exist in phase-1 execution directory root.
    - Wrapper fails if `APPROVAL.md` exists but is stale (not updated by phase 1).

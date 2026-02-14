@@ -150,11 +150,15 @@ if ! grep -Eiq '^[[:space:]-]*Timestamp[[:space:]]*:[[:space:]]*[^[:space:]].*' 
   exit 3
 fi
 
-read -r -p "Proceed with implementation? (Y/n): " yn
-case "${yn:-Y}" in
+if ! read -r -p "Proceed with implementation? (y/N): " yn; then
+  echo "[gate] Implementation canceled: approval input was not provided."
+  exit 4
+fi
+
+case "$yn" in
   Y|y) ;;
   *)
-    echo "[gate] Implementation canceled by user."
+    echo "[gate] Implementation canceled: explicit 'Y' is required to continue."
     exit 4
     ;;
 esac
