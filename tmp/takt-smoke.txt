@@ -1,0 +1,12 @@
+# dual-core smoke check
+
+date: 2026-02-14
+branch: chore/dual-core-smoke-20260214
+flow:
+  - plan: completed
+  - audit: completed
+  - approval: completed
+  - implement: completed
+  - fix: completed
+
+artifact: minimal verification file for dual-core end-to-end smoke test.
