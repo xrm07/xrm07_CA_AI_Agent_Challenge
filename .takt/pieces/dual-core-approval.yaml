@@ -1,5 +1,5 @@
-name: dual-core
-description: Legacy single-run flow. Claude plans/implements and Codex audits/fixes with model-driven approval routing.
+name: dual-core-approval
+description: Phase 1 only. Plan, audit, and build APPROVAL.md, then always stop for explicit human approval.
 interactive_mode: persona
 initial_movement: plan
 max_movements: 12
@@ -81,58 +81,11 @@ movements:
       - Approval fields: Approved(Y/N), Reason, Timestamp
       Rules:
       - Do not modify source code except APPROVAL.md in this movement.
-      - If implementation is ready, return status tag for "approved".
-      - If critical blockers remain, return status tag for "rejected".
+      - Choose Approved(Y/N) based on PLAN.md and AUDIT.md findings.
+      - Always produce APPROVAL.md and finish with status tag "done".
     output_contracts:
       report:
         - name: 03-approval-gate.md
-    rules:
-      - condition: approved
-        next: implement
-      - condition: rejected
-        next: COMPLETE
-
-  - name: implement
-    edit: true
-    permission_mode: edit
-    provider: claude
-    model: claude-opus-4-6[1m]
-    persona: coder
-    knowledge: architecture
-    allowed_tools: [Read, Glob, Grep, Edit, Bash]
-    instruction_template: |
-      Inputs: PLAN.md and AUDIT.md.
-      Goal: implement according to PLAN.md and resolve audit findings.
-      Rules:
-      - Keep changes minimal and explain each change.
-      - Run relevant build/tests and document command outputs.
-      Deliverable:
-      - Implementation report including changed files, commands, and results.
-    output_contracts:
-      report:
-        - name: 04-implement-log.md
-    rules:
-      - condition: done
-        next: fix
-
-  - name: fix
-    edit: true
-    permission_mode: edit
-    provider: codex
-    model: gpt-5.3-codex
-    persona: code-reviewer
-    knowledge: architecture
-    allowed_tools: [Read, Glob, Grep, Edit, Bash]
-    instruction_template: |
-      Goal: make minimal fixes for failed tests/build or quality issues.
-      Rules:
-      - Do not weaken test coverage to force a pass.
-      - Iterate as: identify root cause -> propose minimal fix -> apply -> verify.
-      Deliverable:
-      - Fix report with root cause, patch summary, rerun commands, and outcomes.
-    output_contracts:
-      report:
-        - name: 05-fix-log.md
     rules:
       - condition: done
         next: COMPLETE

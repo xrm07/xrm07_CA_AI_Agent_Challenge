@@ -1,0 +1,65 @@
+name: dual-core-apply
+description: Phase 2 only. Run implement and fix after explicit human approval is confirmed.
+interactive_mode: persona
+initial_movement: implement
+max_movements: 12
+
+piece_config:
+  provider_options:
+    claude:
+      network_access: true
+    codex:
+      network_access: true
+
+movements:
+  - name: implement
+    edit: true
+    permission_mode: edit
+    provider: claude
+    model: claude-opus-4-6[1m]
+    persona: coder
+    knowledge: architecture
+    allowed_tools: [Read, Glob, Grep, Edit, Bash]
+    instruction_template: |
+      Inputs: APPROVAL.md, PLAN.md, and AUDIT.md.
+      Precondition:
+      - APPROVAL.md must include all of the following fields with non-empty values:
+        Approved(Y/N), Reason, Timestamp.
+      - If APPROVAL.md is missing or Approved(Y/N) is not Y, do not implement anything.
+        Return status tag "blocked" with the reason.
+      Goal: implement according to PLAN.md and resolve audit findings.
+      Rules:
+      - Keep changes minimal and explain each change.
+      - Run relevant build/tests and document command outputs.
+      Deliverable:
+      - Implementation report including changed files, commands, and results.
+    output_contracts:
+      report:
+        - name: 04-implement-log.md
+    rules:
+      - condition: blocked
+        next: ABORT
+      - condition: done
+        next: fix
+
+  - name: fix
+    edit: true
+    permission_mode: edit
+    provider: codex
+    model: gpt-5.3-codex
+    persona: code-reviewer
+    knowledge: architecture
+    allowed_tools: [Read, Glob, Grep, Edit, Bash]
+    instruction_template: |
+      Goal: make minimal fixes for failed tests/build or quality issues.
+      Rules:
+      - Do not weaken test coverage to force a pass.
+      - Iterate as: identify root cause -> propose minimal fix -> apply -> verify.
+      Deliverable:
+      - Fix report with root cause, patch summary, rerun commands, and outcomes.
+    output_contracts:
+      report:
+        - name: 05-fix-log.md
+    rules:
+      - condition: done
+        next: COMPLETE
