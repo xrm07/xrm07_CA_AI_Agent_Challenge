@@ -71,8 +71,8 @@ if [[ -n "$create_worktree" ]]; then
 fi
 
 marker_file="$(mktemp)"
-# Keep marker slightly in the past to avoid same-timestamp misses on coarse filesystems.
-touch -d '1 second ago' "$marker_file" 2>/dev/null || true
+# Use an exact run-start marker so stale artifacts are never treated as outputs of this run.
+touch "$marker_file"
 cleanup() {
   rm -f "$marker_file"
 }

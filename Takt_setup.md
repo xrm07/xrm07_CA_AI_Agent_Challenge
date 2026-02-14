@@ -108,7 +108,15 @@ Notes:
 takt -w dual-core-approval --create-worktree yes
 ```
 
-Then verify approval packet and confirm in terminal:
+Then resolve the phase-1 worktree directory and switch into it:
+
+```bash
+clone_meta_file="$(find .takt/clone-meta -maxdepth 1 -type f -name '*.json' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+phase1_worktree_dir="$(grep -oE '"clonePath"[[:space:]]*:[[:space:]]*"[^"]+"' "$clone_meta_file" | sed -E 's/.*"clonePath"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+cd "$phase1_worktree_dir"
+```
+
+Verify approval packet and confirm in terminal:
 
 ```bash
 cat APPROVAL.md
