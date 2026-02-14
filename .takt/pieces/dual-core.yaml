@@ -1,8 +1,8 @@
 name: dual-core
-description: Claude plans and implements, Codex audits and fixes with minimal permissions.
-interactive_mode: assistant
+description: Claude plans and implements, Codex audits and fixes with an explicit approval gate.
+interactive_mode: persona
 initial_movement: plan
-max_movements: 10
+max_movements: 12
 
 piece_config:
   provider_options:
@@ -57,7 +57,40 @@ movements:
         - name: 02-audit-top5.md
     rules:
       - condition: done
+        next: approval
+
+  - name: approval
+    edit: true
+    permission_mode: edit
+    provider: claude
+    model: claude-opus-4-6[1m]
+    persona: supervisor
+    knowledge: architecture
+    allowed_tools: [Read, Glob, Grep, Edit]
+    instruction_template: |
+      Inputs: PLAN.md and AUDIT.md.
+      Goal: generate APPROVAL.md at repository root as a pre-implementation approval packet.
+      Required sections in APPROVAL.md:
+      - Purpose
+      - Changed files list (planned)
+      - Change summary (3-7 bullets)
+      - Impact scope
+      - Commands to run and expected results
+      - Risk and unresolved items
+      - Rollback plan
+      - Approval fields: Approved(Y/N), Reason, Timestamp
+      Rules:
+      - Do not modify source code except APPROVAL.md in this movement.
+      - If implementation is ready, return status tag for "approved".
+      - If critical blockers remain, return status tag for "rejected".
+    output_contracts:
+      report:
+        - name: 03-approval-gate.md
+    rules:
+      - condition: approved
         next: implement
+      - condition: rejected
+        next: COMPLETE
 
   - name: implement
     edit: true
@@ -77,7 +110,7 @@ movements:
       - Implementation report including changed files, commands, and results.
     output_contracts:
       report:
-        - name: 03-implement-log.md
+        - name: 04-implement-log.md
     rules:
       - condition: done
         next: fix
@@ -99,7 +132,7 @@ movements:
       - Fix report with root cause, patch summary, rerun commands, and outcomes.
     output_contracts:
       report:
-        - name: 04-fix-log.md
+        - name: 05-fix-log.md
     rules:
       - condition: done
         next: COMPLETE
