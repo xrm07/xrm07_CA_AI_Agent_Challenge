@@ -16,6 +16,7 @@ movements:
     edit: false
     permission_mode: readonly
     provider: claude
+    model: claude-opus-4-6[1m]
     persona: architect-planner
     knowledge: architecture
     allowed_tools: [Read, Glob, Grep]
@@ -38,6 +39,7 @@ movements:
     edit: false
     permission_mode: readonly
     provider: codex
+    model: gpt-5.3-codex
     persona: security-reviewer
     knowledge: architecture
     allowed_tools: [Read, Glob, Grep]
@@ -61,6 +63,7 @@ movements:
     edit: true
     permission_mode: edit
     provider: claude
+    model: claude-opus-4-6[1m]
     persona: coder
     knowledge: architecture
     allowed_tools: [Read, Glob, Grep, Edit, Bash]
@@ -83,6 +86,7 @@ movements:
     edit: true
     permission_mode: edit
     provider: codex
+    model: gpt-5.3-codex
     persona: code-reviewer
     knowledge: architecture
     allowed_tools: [Read, Glob, Grep, Edit, Bash]

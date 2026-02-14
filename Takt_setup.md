@@ -51,6 +51,9 @@ Commands run and outcomes:
    - `implement`, `fix`: edit + bash allowed
 3. Routing configured:
    - `plan -> audit -> implement -> fix -> COMPLETE`
+4. Pinned movement models:
+   - Claude movements (`plan`, `implement`): `claude-opus-4-6[1m]`
+   - Codex movements (`audit`, `fix`): `gpt-5.3-codex`
 
 ## 5. Approval Register (Production Gate)
 
@@ -81,19 +84,50 @@ Then:
 takt --task "Create PLAN.md, audit it, implement changes, and fix until checks pass" --piece dual-core
 ```
 
-## 7. Validation Scenarios
+## 7. Model Override Policy
+
+Model/provider choices are controlled with this policy:
+
+1. CLI override (`--provider`, `--model`) for one-off runs
+2. Movement-level `provider` and `model` in piece YAML
+3. Custom agent `provider` and `model` (if used)
+4. Global/project config defaults
+5. Provider defaults
+
+Project default is movement pinning in `.takt/pieces/dual-core.yaml`.
+
+## 8. Fallback Procedure (`gpt-5.3-codex` unavailable)
+
+If Codex movement fails because `gpt-5.3-codex` is unavailable in the current route/account:
+
+1. Try one-off execution override:
+
+```bash
+takt --task "..." --piece dual-core --provider codex --model codex
+```
+
+2. If still blocked, temporarily switch the Codex movement model in
+`.takt/pieces/dual-core.yaml` from `gpt-5.3-codex` to `codex`, run the task,
+then restore the original model string.
+
+3. Record the fallback reason and command used in the run report.
+
+## 9. Validation Scenarios
 
 1. Piece load check
    - Command: `takt prompt dual-core`
    - Expectation: prompt preview starts and shows movements in order.
    - Note: in `takt 0.13.0`, preview may still print `reportContent is required for report-based judgment` even with valid pieces.
-2. Interactive piece execution
+2. Model pinning check
+   - Command: `rg -n "model:" .takt/pieces/dual-core.yaml`
+   - Expectation: four model entries exist (2 Claude, 2 Codex).
+3. Interactive piece execution
    - Command: `takt -w dual-core`
    - Expectation: after `/go`, movements follow configured providers and permissions.
-3. Safety guard check
+4. Safety guard check
    - Ensure API key variables are still empty before execution.
 
-## 8. Rollback / Recovery
+## 10. Rollback / Recovery
 
 If `dual-core` causes issues:
 
@@ -104,8 +138,9 @@ If `dual-core` causes issues:
 3. Disable this piece by renaming file:
    - `.takt/pieces/dual-core.yaml` -> `.takt/pieces/dual-core.yaml.disabled`
 
-## 9. Notes
+## 11. Notes
 
 - `takt` emitted an update-check permission warning for `~/.config`; this does not block normal execution.
 - `takt prompt` currently emits a status-judgment error in this environment (`takt 0.13.0`), including for built-in pieces.
+- `gpt-5.3-codex` and `[1m]` model behavior can depend on provider-side account and route availability.
 - Keep this guide updated whenever piece permissions, auth policy, or execution mode changes.
