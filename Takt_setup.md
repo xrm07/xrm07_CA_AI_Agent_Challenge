@@ -87,15 +87,19 @@ All items below must stay approved before production tasks:
 Behavior:
 
 1. Runs phase 1 (`dual-core-approval`) and always stops after `approval` movement.
-2. Locates exactly one updated `APPROVAL.md` under the phase-1 execution directory.
-3. Verifies `APPROVAL.md` contains approved status and required fields.
-4. Prompts: `Proceed with implementation? (Y/n)`.
-5. Runs phase 2 (`dual-core-apply`) only when the user confirms.
+2. Resolves the phase-1 execution directory:
+   - If worktree was created, resolve from `.takt/clone-meta/*.json`.
+   - Otherwise use current directory.
+3. Reads `APPROVAL.md` from phase-1 execution directory root.
+4. Verifies `APPROVAL.md` contains approved status and required fields.
+5. Prompts: `Proceed with implementation? (Y/n)`.
+6. Runs phase 2 (`dual-core-apply`) only when the user confirms.
 
 Notes:
 
 - `-w/--piece` is optional for the wrapper, but if provided it must be `dual-core`.
-- If zero or multiple updated `APPROVAL.md` files are found, wrapper stops instead of guessing.
+- If multiple updated clone metadata files are found, wrapper stops instead of guessing.
+- If `--create-worktree yes` is set but no updated clone metadata is found, wrapper stops.
 
 ### Manual two-step run (optional)
 
@@ -136,7 +140,8 @@ Wrapper validation requires all of the following:
 - `Approved: Y` (or `Approved (Y/N): Y`)
 - Non-empty `Reason`
 - Non-empty `Timestamp`
-- Updated by phase 1 in the current execution directory tree
+- `APPROVAL.md` exists at phase-1 execution directory root
+- `APPROVAL.md` is updated by phase 1 (stale packet is rejected)
 
 If any check fails, phase 2 is blocked.
 
@@ -185,12 +190,16 @@ from `gpt-5.3-codex` to `codex`, run the task, then restore the original model s
    - Phase 1 ends before implementation starts.
    - Wrapper asks `Proceed with implementation? (Y/n)`.
 5. Approval packet check
-   - Wrapper fails if no updated `APPROVAL.md` is found.
-   - Wrapper fails if multiple updated `APPROVAL.md` files are found.
-6. Piece-flag check
+   - Wrapper fails if `APPROVAL.md` does not exist in phase-1 execution directory root.
+   - Wrapper fails if `APPROVAL.md` exists but is stale (not updated by phase 1).
+6. Worktree resolution check
+   - With `--create-worktree yes`, wrapper resolves phase-1 run directory from clone metadata.
+   - With `--create-worktree no`, wrapper does not use clone metadata.
+   - Wrapper fails if multiple updated clone metadata files are found.
+7. Piece-flag check
    - `./scripts/takt-run-approved.sh -w dual-core` succeeds.
    - `./scripts/takt-run-approved.sh -w not-dual-core` fails with validation error.
-7. Movement limit check
+8. Movement limit check
    - Confirm both piece files have `max_movements: 12`.
 
 ## 11. Rollback / Recovery
